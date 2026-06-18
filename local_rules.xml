@@ -1,0 +1,17 @@
+<group name="ddos,web,attack,">
+
+  <rule id="100500" level="12">
+    <if_sid>530</if_sid>
+    <match>TEST DDoS EVENT</match>
+    <description>DDoS detector script triggered</description>
+  </rule>
+
+  <rule id="100501" level="15">
+    <if_sid>530</if_sid>
+    <match>DDOS_DETECTED</match>
+    <regex>SRC_IP=(\d+\.\d+\.\d+\.\d+)</regex>
+    <description>DDoS attack detected from $(srcip)</description>
+    <group>ddos,attack,active_response,</group>
+  </rule>
+
+</group>

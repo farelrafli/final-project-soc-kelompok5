@@ -1,0 +1,14 @@
+<!-- Local Decoders -->
+<decoder name="local_decoder_example">
+    <program_name>local_decoder_example</program_name>
+</decoder>
+
+<decoder name="ddos-detector">
+    <prematch>DDOS_DETECTED SRC_IP=</prematch>
+</decoder>
+
+<decoder name="ddos-detector-ip">
+    <parent>ddos-detector</parent>
+    <regex>DDOS_DETECTED SRC_IP=([0-9.]+) REQUESTS=([0-9]+)</regex>
+    <order>srcip,extra_data</order>
+</decoder>

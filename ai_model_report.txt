@@ -1,0 +1,37 @@
+============================================================
+AI FALSE ALARM REDUCTION - EVALUATION REPORT
+Kelompok 6 MIKS ITS - Final Project SOC Genap 24/25
+Generated: 2026-06-18 11:44:38
+============================================================
+
+Dataset: 7169 alerts
+True Positives: 364 (5.1%)
+False Positives: 6805 (94.9%)
+
+[FALSE ALARM CRITERIA DEFINED]
+FP Rule IDs: {'510', '503', '31108', '502', '5402', '5502', '5501'}
+Level < 5 from internal src = FP
+firedtimes > 50 = FP (recurring benign)
+Decoders classified as FP by default: {'rootcheck', 'ossec'}
+
+[RANDOM FOREST]
+Precision: 1.0000
+Recall:    1.0000
+F1-Score:  1.0000
+ROC-AUC:   1.0000
+Confusion Matrix: [[73, 0], [0, 1361]]
+
+Feature Importances:
+  rule_level: 0.4049
+  firedtimes: 0.2049
+  rule_id_encoded: 0.1622
+  decoder_encoded: 0.1130
+  has_srcip: 0.0430
+  has_sshd: 0.0365
+  has_sudo: 0.0132
+  has_attack: 0.0079
+
+[ISOLATION FOREST]
+Precision: 1.0000
+Recall:    0.7215
+F1-Score:  0.8382
