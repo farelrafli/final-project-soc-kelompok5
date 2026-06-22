@@ -1,4 +1,4 @@
-<group name="ddos,web,attack,">
+<group name="local,syslog,">
 
   <rule id="100500" level="12">
     <if_sid>530</if_sid>
@@ -11,7 +11,36 @@
     <match>DDOS_DETECTED</match>
     <regex>SRC_IP=(\d+\.\d+\.\d+\.\d+)</regex>
     <description>DDoS attack detected from $(srcip)</description>
-    <group>ddos,attack,active_response,</group>
+  </rule>
+
+  <rule id="100601" level="14">
+    <program_name>bash</program_name>
+    <match>MALWARE_SIMULATION</match>
+    <description>Malware: Known malware behavior pattern detected</description>
+  </rule>
+
+  <rule id="100602" level="13">
+    <program_name>bash</program_name>
+    <match>MALWARE_DROPPER</match>
+    <description>Malware: Suspicious download or execution pattern</description>
+  </rule>
+
+  <rule id="100700" level="12">
+    <program_name>sshd</program_name>
+    <match>Failed password</match>
+    <description>Social Engineering: Failed SSH login - possible phishing credential use</description>
+  </rule>
+
+  <rule id="100701" level="13">
+    <program_name>sudo</program_name>
+    <match>COMMAND</match>
+    <description>Social Engineering: Suspicious privilege escalation after login</description>
+  </rule>
+
+  <rule id="100702" level="14">
+    <program_name>bash</program_name>
+    <match>PHISHING_SIMULATION</match>
+    <description>Social Engineering: Phishing payload execution detected</description>
   </rule>
 
 </group>

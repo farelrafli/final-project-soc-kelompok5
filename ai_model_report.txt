@@ -1,37 +1,65 @@
 ============================================================
 AI FALSE ALARM REDUCTION - EVALUATION REPORT
-Kelompok 6 MIKS ITS - Final Project SOC Genap 24/25
-Generated: 2026-06-18 11:44:38
+Kelompok 5 MIKS ITS - Final Project SOC Genap 24/25
+Generated : 2026-06-22 20:48:07
 ============================================================
 
-Dataset: 7169 alerts
-True Positives: 364 (5.1%)
-False Positives: 6805 (94.9%)
+Dataset  : 11390 alerts
+  True Positives  : 1435 (12.6%)
+  False Positives : 9955 (87.4%)
 
-[FALSE ALARM CRITERIA DEFINED]
-FP Rule IDs: {'510', '503', '31108', '502', '5402', '5502', '5501'}
-Level < 5 from internal src = FP
-firedtimes > 50 = FP (recurring benign)
-Decoders classified as FP by default: {'rootcheck', 'ossec'}
+[LABELING METHOD & KNOWN LIMITATIONS]
+Labels are generated automatically by rule-based heuristics
+(auto_label) using: rule_level, firedtimes, decoder, groups,
+and source IP class. Because these same signals appear as model
+features, there is inherent overlap between the labeling function
+and the feature space. Mitigation steps taken:
+  - rule_id excluded from features (strongest direct leakage)
+  - 10% label noise injected at training time
+  - max_depth reduced to 8 to limit memorisation
+  - 5-fold CV reported to surface variance
+Metrics should be interpreted as upper bounds under this labeling
+regime, not as ground-truth generalisation performance.
 
-[RANDOM FOREST]
-Precision: 1.0000
-Recall:    1.0000
-F1-Score:  1.0000
-ROC-AUC:   1.0000
-Confusion Matrix: [[73, 0], [0, 1361]]
+[FALSE ALARM CRITERIA]
+  FP rule IDs   : {'503', '5501', '510', '502', '5402', '31108', '5502'}
+  Level < 5 from internal src = FP
+  firedtimes > 50 = FP (recurring benign noise)
+  FP decoders   : {'rootcheck', 'ossec'}
 
-Feature Importances:
-  rule_level: 0.4049
-  firedtimes: 0.2049
-  rule_id_encoded: 0.1622
-  decoder_encoded: 0.1130
-  has_srcip: 0.0430
-  has_sshd: 0.0365
-  has_sudo: 0.0132
-  has_attack: 0.0079
+[RANDOM FOREST — HELD-OUT TEST SET (20%)]
+  Precision : 0.9984
+  Recall    : 0.9543
+  F1-Score  : 0.9759
+  ROC-AUC   : 0.9936
+  Confusion Matrix (TP/FP rows, predicted cols): [[284, 3], [91, 1900]]
+  Label noise applied to training set: 10%
 
-[ISOLATION FOREST]
-Precision: 1.0000
-Recall:    0.7215
-F1-Score:  0.8382
+[RANDOM FOREST — 5-FOLD CROSS VALIDATION]
+  F1 mean : 0.9831
+  F1 std  : 0.0023  (lower std = more stable)
+  Note: CV is run on auto-labeled data; see limitation note above.
+
+[PRECISION-RECALL CURVE — SELECTED THRESHOLDS]
+  thresh=0.29  P=0.9883  R=0.9794
+  thresh=0.40  P=0.9943  R=0.9684
+  thresh=0.50  P=0.9984  R=0.9548
+  thresh=0.60  P=0.9994  R=0.8418
+  thresh=0.70  P=1.0000  R=0.1467
+
+[FEATURE IMPORTANCES — TOP 8]
+  firedtimes: 0.2937
+  decoder_encoded: 0.1947
+  has_srcip: 0.1781
+  has_sshd: 0.1380
+  has_attack: 0.0941
+  has_authentication: 0.0411
+  has_sudo: 0.0367
+  is_manager: 0.0182
+
+[ISOLATION FOREST — UNSUPERVISED BASELINE]
+  Precision : 0.9708
+  Recall    : 0.7845
+  F1-Score  : 0.8678
+  (contamination=0.3; no labels used in training)
+============================================================
