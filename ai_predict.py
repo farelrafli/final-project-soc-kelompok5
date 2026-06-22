@@ -35,12 +35,8 @@ def extract_features_single(alert, model_data):
         dec_enc = le.transform([decoder_name])[0]
     except:
         dec_enc = -1
-    try:
-        rule_id_enc = int(rule_id)
-    except:
-        rule_id_enc = -1
     return [[
-        rule_level, rule_id_enc, firedtimes, hour, dow, biz,
+        rule_level, firedtimes, hour, dow, biz,
         is_manager, dec_enc, has_srcip, is_internal,
         1 if any('auth' in g for g in groups) else 0,
         1 if any(g in ('attack','ddos','web_scan') for g in groups) else 0,
