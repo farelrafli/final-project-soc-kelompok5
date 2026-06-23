@@ -185,7 +185,7 @@ Model disimpan sebagai file `.pkl` dan dipanggil oleh `ai_predict.py` setiap kal
 
 > Catatan: kontaminasi pada Isolation Forest diatur pada nilai generik (0.3) sebagai baseline, bukan disesuaikan dengan proporsi kelas asli pada dataset (~16.6% TP). Perbandingan langsung dengan Random Forest perlu memperhitungkan hal ini.
 
-> **[SCREENSHOT]** Laporan evaluasi lengkap (`ai_model_report.txt`):
+> **[<img width="267" height="394" alt="Screenshot_15" src="https://github.com/user-attachments/assets/3efaefca-843e-4baf-be8b-d05576ba8b67" />]** Laporan evaluasi lengkap (`ai_model_report.txt`):
 > ```bash
 > sudo cat /var/ossec/logs/ai_model_report.txt
 > ```
