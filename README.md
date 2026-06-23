@@ -35,9 +35,7 @@ Alur kerja sistem:
 
 ## 2. Diagram Arsitektur
 
-> **[GANTI DIAGRAM INI]** — diagram lama menunjukkan SOAR sebagai satu blok tunggal yang selalu mengarah ke agent-web. Karena active-response sekarang di-scope per-skenario (lihat catatan desain di atas), diagram perlu diperbarui untuk menunjukkan dua jalur SOAR terpisah: DDoS → agent-web, Social Engineering → agent-db. Gambar ulang diagram ini sebelum submit.
-
-<img width="986" height="587" alt="image" src="PASTE_LINK_DIAGRAM_BARU_DI_SINI" />
+> <img width="1003" height="512" alt="image" src="https://github.com/user-attachments/assets/1b54a109-7537-4dbb-9e4c-e481c821dbb5" />
 
 Alur kerja:
 1. Attacker melancarkan serangan ke agent-web (DDoS) atau agent-db (Malware/Social Engineering)
