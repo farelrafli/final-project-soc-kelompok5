@@ -20,6 +20,5 @@ tail -n "$NEW_LINES" "$LOG" 2>/dev/null | awk '{print $1}' | \
 while read -r count ip; do
     if [ "$count" -ge "$THRESHOLD" ]; then
         echo "DDOS_DETECTED SRC_IP=$ip REQUESTS=$count"
-        break
     fi
 done

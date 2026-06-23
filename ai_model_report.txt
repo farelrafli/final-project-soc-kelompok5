@@ -1,12 +1,12 @@
 ============================================================
 AI FALSE ALARM REDUCTION - EVALUATION REPORT
 Kelompok 5 MIKS ITS - Final Project SOC Genap 24/25
-Generated : 2026-06-22 20:48:07
+Generated : 2026-06-23 19:45:08
 ============================================================
 
-Dataset  : 11390 alerts
-  True Positives  : 1435 (12.6%)
-  False Positives : 9955 (87.4%)
+Dataset  : 16182 alerts
+  True Positives  : 2688 (16.6%)
+  False Positives : 13494 (83.4%)
 
 [LABELING METHOD & KNOWN LIMITATIONS]
 Labels are generated automatically by rule-based heuristics
@@ -22,44 +22,44 @@ Metrics should be interpreted as upper bounds under this labeling
 regime, not as ground-truth generalisation performance.
 
 [FALSE ALARM CRITERIA]
-  FP rule IDs   : {'503', '5501', '510', '502', '5402', '31108', '5502'}
+  FP rule IDs   : {'5501', '503', '502', '31108', '5402', '5502', '510'}
   Level < 5 from internal src = FP
   firedtimes > 50 = FP (recurring benign noise)
   FP decoders   : {'rootcheck', 'ossec'}
 
 [RANDOM FOREST — HELD-OUT TEST SET (20%)]
-  Precision : 0.9984
-  Recall    : 0.9543
-  F1-Score  : 0.9759
-  ROC-AUC   : 0.9936
-  Confusion Matrix (TP/FP rows, predicted cols): [[284, 3], [91, 1900]]
+  Precision : 0.9992
+  Recall    : 0.9655
+  F1-Score  : 0.9821
+  ROC-AUC   : 0.9949
+  Confusion Matrix (TP/FP rows, predicted cols): [[536, 2], [93, 2606]]
   Label noise applied to training set: 10%
 
 [RANDOM FOREST — 5-FOLD CROSS VALIDATION]
-  F1 mean : 0.9831
-  F1 std  : 0.0023  (lower std = more stable)
+  F1 mean : 0.9834
+  F1 std  : 0.0020  (lower std = more stable)
   Note: CV is run on auto-labeled data; see limitation note above.
 
 [PRECISION-RECALL CURVE — SELECTED THRESHOLDS]
-  thresh=0.29  P=0.9883  R=0.9794
-  thresh=0.40  P=0.9943  R=0.9684
-  thresh=0.50  P=0.9984  R=0.9548
-  thresh=0.60  P=0.9994  R=0.8418
-  thresh=0.70  P=1.0000  R=0.1467
+  thresh=0.31  P=0.9818  R=0.9818
+  thresh=0.40  P=0.9928  R=0.9752
+  thresh=0.51  P=0.9992  R=0.9655
+  thresh=0.60  P=1.0000  R=0.9022
+  thresh=0.70  P=1.0000  R=0.6199
 
 [FEATURE IMPORTANCES — TOP 8]
-  firedtimes: 0.2937
-  decoder_encoded: 0.1947
-  has_srcip: 0.1781
-  has_sshd: 0.1380
-  has_attack: 0.0941
-  has_authentication: 0.0411
-  has_sudo: 0.0367
-  is_manager: 0.0182
+  firedtimes: 0.4745
+  decoder_encoded: 0.1711
+  has_sshd: 0.1171
+  has_srcip: 0.0814
+  has_attack: 0.0466
+  has_sudo: 0.0442
+  has_authentication: 0.0422
+  is_manager: 0.0177
 
 [ISOLATION FOREST — UNSUPERVISED BASELINE]
-  Precision : 0.9708
-  Recall    : 0.7845
-  F1-Score  : 0.8678
+  Precision : 0.8646
+  Recall    : 0.7332
+  F1-Score  : 0.7935
   (contamination=0.3; no labels used in training)
 ============================================================
