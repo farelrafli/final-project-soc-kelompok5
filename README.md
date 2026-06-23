@@ -32,7 +32,14 @@ Alur kerja sistem:
 
 ## 2. Diagram Arsitektur
 
-> Diagram arsitektur sistem (dibuat terpisah, lihat dokumen laporan)
+<img width="986" height="587" alt="image" src="https://github.com/user-attachments/assets/a2fbbd70-ad8e-4161-9eba-b714c848c585" />
+
+Alur kerja:
+1. Attacker melancarkan serangan ke agent-web (DDoS) atau agent-db (Malware/Social Engineering)
+2. Wazuh Agent di setiap node mengumpulkan log dan mengirim alert ke Wazuh Manager
+3. AI Model (Random Forest) mengklasifikasikan setiap alert sebagai TRUE_POSITIVE atau FALSE_POSITIVE
+4. Jika TRUE_POSITIVE DDoS terdeteksi, SOAR layer (ddos-block.py) memblokir IP penyerang via iptables
+5. Setiap keputusan SOAR dicatat ke soar_audit.jsonl sebagai audit trail terstruktur
 
 ---
 
