@@ -1,5 +1,5 @@
 # SOC False Alarm Reduction - Kelompok 5 MIKS ITS
-Final Project SOC Genap 24/25
+Final Project SOC Genap 25/26
 
 ## Anggota Kelompok
 | NRP | Nama |
