@@ -19,48 +19,70 @@ Sistem ini terdiri dari tiga node yang berjalan di Azure Free-Tier Student:
 | Node | IP | Peran |
 |------|----|-------|
 | wazuh-manager | 10.0.0.4 | SIEM, rule engine, integrasi AI |
-| agent-web | 10.0.0.6 | Web server, target DDoS, eksekusi SOAR |
-| agent-db | 10.0.0.7 | Database server, skenario Malware dan Social Engineering |
+| agent-web | 10.0.0.6 | Web server, target DDoS, eksekusi SOAR untuk skenario DDoS |
+| agent-db | 10.0.0.7 | Database server, skenario Malware dan Social Engineering, eksekusi SOAR untuk skenario Social Engineering |
 
 Alur kerja sistem:
 1. Wazuh Agent di setiap node mengumpulkan log dan mengirim ke Wazuh Manager
 2. Wazuh Manager mencocokkan log dengan rules dan menghasilkan alert
-3. Model AI (ai_predict.py) mengklasifikasikan setiap alert sebagai TRUE_POSITIVE atau FALSE_POSITIVE
-4. Jika alert adalah TRUE_POSITIVE DDoS, SOAR (ddos-block.py) otomatis memblokir IP penyerang via iptables dan mencatat audit trail ke soar_audit.jsonl
+3. Model AI (`ai_predict.py`) mengklasifikasikan setiap alert sebagai TRUE_POSITIVE atau FALSE_POSITIVE
+4. Active-response (`ddos-block.py`) dieksekusi secara **per-skenario, bukan global**:
+   - Rule 100501 (DDoS) → dieksekusi di agent-web (host target)
+   - Rule 100700/100701 (Social Engineering — SSH brute force & privilege escalation) → dieksekusi secara lokal di agent yang menghasilkan alert (agent-db)
+   - Setiap keputusan dicatat ke `soar_audit.jsonl` di host yang menjalankan respons tersebut
 
 ---
 
 ## 2. Diagram Arsitektur
 
-<img width="986" height="587" alt="image" src="https://github.com/user-attachments/assets/a2fbbd70-ad8e-4161-9eba-b714c848c585" />
+> **[GANTI DIAGRAM INI]** — diagram lama menunjukkan SOAR sebagai satu blok tunggal yang selalu mengarah ke agent-web. Karena active-response sekarang di-scope per-skenario (lihat catatan desain di atas), diagram perlu diperbarui untuk menunjukkan dua jalur SOAR terpisah: DDoS → agent-web, Social Engineering → agent-db. Gambar ulang diagram ini sebelum submit.
+
+<img width="986" height="587" alt="image" src="PASTE_LINK_DIAGRAM_BARU_DI_SINI" />
 
 Alur kerja:
 1. Attacker melancarkan serangan ke agent-web (DDoS) atau agent-db (Malware/Social Engineering)
 2. Wazuh Agent di setiap node mengumpulkan log dan mengirim alert ke Wazuh Manager
 3. AI Model (Random Forest) mengklasifikasikan setiap alert sebagai TRUE_POSITIVE atau FALSE_POSITIVE
-4. Jika TRUE_POSITIVE DDoS terdeteksi, SOAR layer (ddos-block.py) memblokir IP penyerang via iptables
-5. Setiap keputusan SOAR dicatat ke soar_audit.jsonl sebagai audit trail terstruktur
+4. Jika TRUE_POSITIVE DDoS terdeteksi, SOAR layer di agent-web memblokir IP penyerang via iptables
+5. Jika TRUE_POSITIVE Social Engineering (SSH brute force) terdeteksi, SOAR layer di agent-db memblokir IP penyerang secara lokal
+6. Setiap keputusan SOAR dicatat ke `soar_audit.jsonl` pada host yang mengeksekusi respons, sebagai audit trail terstruktur
 
 ---
 
 ## 3. Skenario Serangan
 
 ### 3.1 DDoS
-Simulasi HTTP flood menggunakan ApacheBench dari agent-web ke target:
+Simulasi HTTP flood menggunakan ApacheBench dari laptop/WSL ke target agent-web:
 
 ```bash
 ab -n 1000 -c 50 http://20.244.51.91/wp-login.php
 ```
 
-<img width="413" height="415" alt="Screenshot_4" src="https://github.com/user-attachments/assets/6c6e2f2d-040e-4bbc-8a28-8f25caf64195" />
+> <img width="591" height="264" alt="Screenshot_3" src="https://github.com/user-attachments/assets/38a80de7-902a-4287-af9c-031270ebed32" />
 
-SOAR otomatis mendeteksi dan memblokir IP penyerang. Audit trail tercatat di soar_audit.jsonl:
+> **[SCREENSHOT]** Alert rule 100501 di `alerts.json` pada wazuh-manager, menunjukkan level 15, groups `["local","syslog","ddos","attack","active_response"]`, dan `full_log` berisi `DDOS_DETECTED SRC_IP=... REQUESTS=...`. Jalankan:
+> ```bash
+> sudo tail -10 /var/ossec/logs/alerts/alerts.json | grep '"id":"100501"'
+> ```
+> **VM: wazuh-manager**
 
-<img width="853" height="424" alt="Screenshot_5" src="https://github.com/user-attachments/assets/16dada41-8878-43d5-a7f3-f9f0d1036936" />
+> **[SCREENSHOT]** Audit trail SOAR di agent-web menunjukkan `enforcement: iptables_INPUT+FORWARD_DROP` dengan `rule_id: 100501`. Jalankan:
+> ```bash
+> sudo tail -5 /var/ossec/logs/soar_audit.jsonl
+> ```
+> **VM: agent-web**
 
-Konfirmasi iptables aktif memblokir IP:
+> **[SCREENSHOT]** Konfirmasi iptables aktif memblokir IP penyerang di agent-web. Jalankan:
+> ```bash
+> sudo iptables -L INPUT -n --line-numbers
+> ```
+> **VM: agent-web**
 
-<img width="369" height="50" alt="Screenshot_7" src="https://github.com/user-attachments/assets/52cfbf32-3dde-49c7-8c7d-7367b2a3d4b8" />
+> **[SCREENSHOT — bukti isolasi]** Konfirmasi agent-db TIDAK terpengaruh oleh blokir DDoS (membuktikan scoping per-agent berfungsi). Jalankan:
+> ```bash
+> sudo iptables -L INPUT -n
+> ```
+> **VM: agent-db**
 
 ### 3.2 Malware
 Simulasi dropper malware, C2 download, dan eksekusi payload di agent-db:
@@ -68,25 +90,45 @@ Simulasi dropper malware, C2 download, dan eksekusi payload di agent-db:
 ```bash
 sudo /usr/local/bin/simulate-malware.sh
 ```
+**VM: agent-db**
 
-<img width="860" height="89" alt="image" src="https://github.com/user-attachments/assets/c3e4f9e8-ad99-4656-a565-b533a300159a" />
+> **[SCREENSHOT]** Output terminal simulasi malware di agent-db ("=== MALWARE SIMULATION ===" dan baris event yang dicatat).
 
-Alert malware terdeteksi di Wazuh Manager (rule 100601, level 14):
-
-<img width="851" height="335" alt="Screenshot_8" src="https://github.com/user-attachments/assets/6fdb2a77-b62a-47c9-850c-6e59b1f59663" />
+> **[SCREENSHOT]** Alert malware terdeteksi di Wazuh Manager (rule 100601, level 14, groups `["local","syslog","malware","attack"]`). Jalankan:
+> ```bash
+> sudo tail -10 /var/ossec/logs/alerts/alerts.json | grep '"id":"100601"'
+> ```
+> **VM: wazuh-manager**
 
 ### 3.3 Social Engineering
-Simulasi credential harvesting dan eksfiltrasi data di agent-db:
+Simulasi SSH brute force, privilege escalation, dan eksfiltrasi data di agent-db:
 
 ```bash
 sudo /usr/local/bin/simulate-soceng.sh
 ```
+**VM: agent-db**
 
-<img width="849" height="83" alt="image" src="https://github.com/user-attachments/assets/53d7414c-f07c-429c-90fc-1ca548d588df" />
+> **[SCREENSHOT]** Output terminal simulasi social engineering di agent-db.
 
-Alert social engineering terdeteksi di Wazuh Manager (rule 100702, level 14):
+> **[SCREENSHOT]** Alert social engineering terdeteksi di Wazuh Manager — rule 100700 (SSH failed login), 100701 (privilege escalation), dan 100702 (phishing payload), semua dengan groups `["local","syslog","social_engineering","attack"]`. Jalankan:
+> ```bash
+> sudo tail -20 /var/ossec/logs/alerts/alerts.json | grep -E '"id":"(100700|100701|100702)"'
+> ```
+> **VM: wazuh-manager**
 
-<img width="848" height="137" alt="Screenshot_9" src="https://github.com/user-attachments/assets/304d8007-7a02-4053-b014-b08a0bd038d2" />
+> **[SCREENSHOT]** Audit trail SOAR di agent-db menunjukkan blokir IP `203.0.113.x` (rule 100700), serta `decision_reason: no_src_ip_found` untuk rule 100701 (privilege escalation via sudo tidak memiliki source IP untuk diblokir — lihat bagian Keterbatasan SOAR). Jalankan:
+> ```bash
+> sudo tail -10 /var/ossec/logs/soar_audit.jsonl
+> ```
+> **VM: agent-db**
+
+> **[SCREENSHOT]** Konfirmasi iptables aktif memblokir IP di agent-db. Jalankan:
+> ```bash
+> sudo iptables -L INPUT -n --line-numbers
+> ```
+> **VM: agent-db**
+
+> **Keterbatasan SOAR untuk Social Engineering:** Rule 100701 (privilege escalation via sudo) bersifat alert-only — log sudo tidak memiliki field source IP sehingga tidak ada target jaringan untuk diblokir. Rule 100702 (eksfiltrasi data) juga bersifat alert-only pada iterasi ini — implementasi `ddos-block.py` saat ini hanya mendukung blokir berdasarkan source IP (`-s`), sedangkan blokir destinasi eksfiltrasi memerlukan filter `-d` yang belum diimplementasikan. Kedua keterbatasan ini adalah keputusan desain yang disengaja mengingat keterbatasan waktu, bukan bug yang belum ditemukan.
 
 ---
 
@@ -98,7 +140,7 @@ Sistem menggunakan dua model:
 - **Isolation Forest** : baseline unsupervised untuk deteksi anomali
 
 ### Proses Training
-- Data : 11.390 alert dari log Wazuh nyata di Azure
+- Data : 16.182 alert dari log Wazuh nyata di Azure (akumulasi dari seluruh skenario pengujian)
 - Label : dihasilkan otomatis oleh fungsi heuristik `auto_label()` berdasarkan rule_id, firedtimes, decoder, groups, dan IP class
 - Fitur : 14 sinyal behavioral (rule_id dikecualikan untuk mencegah label leakage)
 - Label noise : 10% diinjeksikan saat training untuk mensimulasikan ketidakpastian anotasi
@@ -111,19 +153,15 @@ Sistem menggunakan dua model:
 - Decoder rootcheck dan ossec = FP secara default
 
 ### Integrasi dengan Wazuh
-Model disimpan sebagai file `.pkl` dan dipanggil oleh `ai_predict.py` setiap kali ada alert masuk. Output berupa label TRUE_POSITIVE atau FALSE_POSITIVE beserta confidence score.
+Model disimpan sebagai file `.pkl` dan dipanggil oleh `ai_predict.py` setiap kali ada alert masuk. Output berupa label TRUE_POSITIVE atau FALSE_POSITIVE beserta confidence score. Seluruh custom rule (100500–100702) telah diberi `<group>` tag yang sesuai (`ddos`/`malware`/`social_engineering`, `attack`) agar fitur `has_attack` dan `has_active_response` pada model AI benar-benar terisi — pada versi sebelumnya, rule custom hanya memiliki group `local,syslog` sehingga fitur tersebut selalu bernilai 0 untuk seluruh skenario serangan.
 
-Output training pipeline:
+> **[SCREENSHOT]** Output training pipeline `ai_false_alarm.py` di terminal.
 
-<img width="522" height="397" alt="Screenshot_1" src="https://github.com/user-attachments/assets/310aacfb-52a5-4aa0-90dc-a9e5ea92554c" />
-
-Uji klasifikasi AI pada alert nyata:
-
-<img width="841" height="254" alt="Screenshot_2" src="https://github.com/user-attachments/assets/41b17d4c-79a8-4d5e-9296-b30da7bc8265" />
-
-Uji manual TRUE_POSITIVE dan FALSE_POSITIVE:
-
-<img width="849" height="141" alt="Screenshot_3" src="https://github.com/user-attachments/assets/a3a88e9e-558b-4f72-abf8-b37797e31965" />
+> **[SCREENSHOT]** Uji klasifikasi AI pada alert nyata menggunakan `ai_predict.py`:
+> ```bash
+> sudo tail -n 15 /var/ossec/logs/alerts/alerts.json | sudo python3 /var/ossec/etc/ai_predict.py
+> ```
+> **VM: wazuh-manager**
 
 ---
 
@@ -132,57 +170,65 @@ Uji manual TRUE_POSITIVE dan FALSE_POSITIVE:
 ### Random Forest - Test Set (20%)
 | Metrik | Nilai |
 |--------|-------|
-| Precision | 0.9984 |
-| Recall | 0.9543 |
-| F1-Score | 0.9759 |
-| ROC-AUC | 0.9936 |
-| CV F1 (5-fold) | 0.9831 +/- 0.0023 |
+| Precision | 0.9992 |
+| Recall | 0.9655 |
+| F1-Score | 0.9821 |
+| ROC-AUC | 0.9949 |
+| CV F1 (5-fold) | 0.9834 +/- 0.0020 |
 
 ### Isolation Forest - Baseline Unsupervised
 | Metrik | Nilai |
 |--------|-------|
-| Precision | 0.9708 |
-| Recall | 0.7845 |
-| F1-Score | 0.8678 |
+| Precision | 0.8646 |
+| Recall | 0.7332 |
+| F1-Score | 0.7935 |
 
-Laporan evaluasi lengkap:
+> Catatan: kontaminasi pada Isolation Forest diatur pada nilai generik (0.3) sebagai baseline, bukan disesuaikan dengan proporsi kelas asli pada dataset (~16.6% TP). Perbandingan langsung dengan Random Forest perlu memperhitungkan hal ini.
 
-<img width="420" height="427" alt="Screenshot_6" src="https://github.com/user-attachments/assets/39322b22-6b37-4687-9cd3-227bf7272d83" />
+> **[SCREENSHOT]** Laporan evaluasi lengkap (`ai_model_report.txt`):
+> ```bash
+> sudo cat /var/ossec/logs/ai_model_report.txt
+> ```
+> **VM: wazuh-manager**
 
 ---
 
 ## 6. Analisis Hasil
 
 ### Reduksi False Alarm
-Dari 11.390 alert yang diproses, 9.955 (87.4%) diklasifikasikan sebagai False Positive. Tanpa AI, seluruh alert ini akan masuk ke antrean analis SOC. Dengan model Random Forest, sistem mampu memfilter FP dengan precision 0.9984, artinya hampir tidak ada True Positive yang salah dibuang.
+Dari 16.182 alert yang diproses, 13.494 (83.4%) diklasifikasikan sebagai False Positive. Tanpa AI, seluruh alert ini akan masuk ke antrean analis SOC. Dengan model Random Forest, sistem mampu memfilter FP dengan precision 0.9992, artinya hampir tidak ada True Positive yang salah dibuang.
 
 ### Deteksi Ancaman
-Recall 0.9543 berarti sistem berhasil mendeteksi 95.43% ancaman nyata. Ini memenuhi tujuan proyek yaitu mengurangi false alarm tanpa mengorbankan akurasi deteksi.
+Recall 0.9655 berarti sistem berhasil mendeteksi 96.55% ancaman nyata pada held-out test set.
 
 ### Keterbatasan
 Label dihasilkan secara otomatis oleh heuristik, bukan oleh analis manusia. Metrik harus diinterpretasikan sebagai upper bound, bukan ground truth independen. Evaluasi lebih akurat membutuhkan dataset berlabel manual.
 
 ### SOAR Response
-Sistem terbukti merespons serangan DDoS secara otomatis dalam hitungan detik. IP penyerang diblokir via iptables dan setiap keputusan dicatat dalam audit trail JSON terstruktur (soar_audit.jsonl).
+Sistem terbukti merespons serangan DDoS dan Social Engineering (SSH brute force) secara otomatis dalam hitungan detik, dengan eksekusi yang di-scope ke agent yang relevan untuk masing-masing skenario. IP penyerang diblokir via iptables dan setiap keputusan dicatat dalam audit trail JSON terstruktur (`soar_audit.jsonl`) pada host yang mengeksekusi respons.
+
+### Validitas Pengujian DDoS
+Pengujian DDoS menggunakan ApacheBench (`ab -n 1000 -c 50`) dari satu sumber (single-source HTTP flood), bukan simulasi botnet terdistribusi. Hasil pengujian membuktikan deteksi dan respons berfungsi untuk pola volumetric flood dari satu IP, namun tidak merepresentasikan skenario DDoS terdistribusi dengan banyak sumber IP secara simultan.
 
 ---
 
 ## Struktur File
 | File | Lokasi | Deskripsi |
 |------|--------|-----------|
-| `ai_false_alarm.py` | Wazuh Manager | Pipeline training model AI |
-| `ai_predict.py` | Wazuh Manager | Inferensi AI per alert |
-| `ai_model_report.txt` | Wazuh Manager | Laporan evaluasi dengan metrik |
-| `ddos-block.py` | agent-web | SOAR active response + audit logging |
+| `ai_false_alarm.py` | wazuh-manager | Pipeline training model AI |
+| `ai_predict.py` | wazuh-manager | Inferensi AI per alert |
+| `ai_model_report.txt` | wazuh-manager | Laporan evaluasi dengan metrik |
+| `ddos-block.py` | agent-web **dan** agent-db | SOAR active response + audit logging (di-deploy di kedua agent untuk mendukung scoping per-skenario) |
 | `ddos-detect.sh` | agent-web | Skrip deteksi DDoS |
-| `local_rules.xml` | Wazuh Manager | Custom detection rules |
-| `local_decoder.xml` | Wazuh Manager | Custom log decoder |
+| `local_rules.xml` | wazuh-manager | Custom detection rules |
+| `local_decoder.xml` | wazuh-manager | Custom log decoder |
 | `simulate-malware.sh` | agent-db | Simulasi skenario Malware |
 | `simulate-soceng.sh` | agent-db | Simulasi skenario Social Engineering |
+| `ossec_manager.conf` | wazuh-manager | Konfigurasi `ossec.conf`, termasuk binding active-response per-skenario |
 
 ## Cara Menjalankan
 
-### Training Model AI (di Wazuh Manager)
+### Training Model AI (di wazuh-manager)
 ```bash
 sudo python3 /var/ossec/etc/ai_false_alarm.py
 ```
@@ -207,7 +253,8 @@ sudo /usr/local/bin/simulate-malware.sh
 sudo /usr/local/bin/simulate-soceng.sh
 ```
 
-### Monitor SOAR (di agent-web)
+### Monitor SOAR
 ```bash
 sudo tail -f /var/ossec/logs/soar_audit.jsonl
 ```
+**VM: agent-web (skenario DDoS) atau agent-db (skenario Social Engineering)**
