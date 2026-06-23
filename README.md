@@ -60,25 +60,33 @@ ab -n 1000 -c 50 http://20.244.51.91/wp-login.php
 
 > <img width="591" height="264" alt="Screenshot_3" src="https://github.com/user-attachments/assets/38a80de7-902a-4287-af9c-031270ebed32" />
 
-> **[SCREENSHOT]** Alert rule 100501 di `alerts.json` pada wazuh-manager, menunjukkan level 15, groups `["local","syslog","ddos","attack","active_response"]`, dan `full_log` berisi `DDOS_DETECTED SRC_IP=... REQUESTS=...`. Jalankan:
+> <img width="850" height="87" alt="Screenshot_4" src="https://github.com/user-attachments/assets/a1d746f3-8311-49f3-bbfa-8a1c1f17fb94" />
+
+Alert rule 100501 di `alerts.json` pada wazuh-manager, menunjukkan level 15, groups `["local","syslog","ddos","attack","active_response"]`, dan `full_log` berisi `DDOS_DETECTED SRC_IP=... REQUESTS=...`. Jalankan:
 > ```bash
 > sudo tail -10 /var/ossec/logs/alerts/alerts.json | grep '"id":"100501"'
 > ```
 > **VM: wazuh-manager**
 
-> **[SCREENSHOT]** Audit trail SOAR di agent-web menunjukkan `enforcement: iptables_INPUT+FORWARD_DROP` dengan `rule_id: 100501`. Jalankan:
+> <img width="1260" height="383" alt="image" src="https://github.com/user-attachments/assets/72127ea3-6c2b-4b7a-a72e-a4b14622af19" />
+
+Audit trail SOAR di agent-web menunjukkan `enforcement: iptables_INPUT+FORWARD_DROP` dengan `rule_id: 100501`. Jalankan:
 > ```bash
 > sudo tail -5 /var/ossec/logs/soar_audit.jsonl
 > ```
 > **VM: agent-web**
 
-> **[SCREENSHOT]** Konfirmasi iptables aktif memblokir IP penyerang di agent-web. Jalankan:
+> <img width="758" height="95" alt="image" src="https://github.com/user-attachments/assets/b00e1b3c-bc5f-45b0-9b2c-54cd13f6aa78" />
+
+Konfirmasi iptables aktif memblokir IP penyerang di agent-web. Jalankan:
 > ```bash
 > sudo iptables -L INPUT -n --line-numbers
 > ```
 > **VM: agent-web**
 
-> **[SCREENSHOT — bukti isolasi]** Konfirmasi agent-db TIDAK terpengaruh oleh blokir DDoS (membuktikan scoping per-agent berfungsi). Jalankan:
+> <img width="317" height="55" alt="Screenshot_2" src="https://github.com/user-attachments/assets/23840039-38fc-44e5-b06d-5e2415b4aaae" />
+
+Konfirmasi agent-db TIDAK terpengaruh oleh blokir DDoS (membuktikan scoping per-agent berfungsi). Jalankan:
 > ```bash
 > sudo iptables -L INPUT -n
 > ```
@@ -92,9 +100,13 @@ sudo /usr/local/bin/simulate-malware.sh
 ```
 **VM: agent-db**
 
-> **[SCREENSHOT]** Output terminal simulasi malware di agent-db ("=== MALWARE SIMULATION ===" dan baris event yang dicatat).
+> <img width="373" height="52" alt="Screenshot_6" src="https://github.com/user-attachments/assets/691aaa9a-430d-49a2-8296-751891bbfe09" />
 
-> **[SCREENSHOT]** Alert malware terdeteksi di Wazuh Manager (rule 100601, level 14, groups `["local","syslog","malware","attack"]`). Jalankan:
+Output terminal simulasi malware di agent-db.
+
+> <img width="846" height="226" alt="Screenshot_7" src="https://github.com/user-attachments/assets/a9520d7d-fbd5-4485-b63a-b8419d9a1cff" />
+
+Alert malware terdeteksi di Wazuh Manager (rule 100601, level 14, groups `["local","syslog","malware","attack"]`). Jalankan:
 > ```bash
 > sudo tail -10 /var/ossec/logs/alerts/alerts.json | grep '"id":"100601"'
 > ```
@@ -108,27 +120,35 @@ sudo /usr/local/bin/simulate-soceng.sh
 ```
 **VM: agent-db**
 
-> **[SCREENSHOT]** Output terminal simulasi social engineering di agent-db.
+> <img width="366" height="49" alt="Screenshot_8" src="https://github.com/user-attachments/assets/20342c61-9f23-4bf4-b6f9-547aaf61ff3b" />
 
-> **[SCREENSHOT]** Alert social engineering terdeteksi di Wazuh Manager — rule 100700 (SSH failed login), 100701 (privilege escalation), dan 100702 (phishing payload), semua dengan groups `["local","syslog","social_engineering","attack"]`. Jalankan:
+Output terminal simulasi social engineering di agent-db.
+
+> <img width="846" height="326" alt="Screenshot_9" src="https://github.com/user-attachments/assets/7f114e08-da8d-4d9c-aa3b-47f03ec13aa4" />
+
+Alert social engineering terdeteksi di Wazuh Manager — rule 100700 (SSH failed login), 100701 (privilege escalation), dan 100702 (phishing payload), semua dengan groups `["local","syslog","social_engineering","attack"]`. Jalankan:
 > ```bash
 > sudo tail -20 /var/ossec/logs/alerts/alerts.json | grep -E '"id":"(100700|100701|100702)"'
 > ```
 > **VM: wazuh-manager**
 
-> **[SCREENSHOT]** Audit trail SOAR di agent-db menunjukkan blokir IP `203.0.113.x` (rule 100700), serta `decision_reason: no_src_ip_found` untuk rule 100701 (privilege escalation via sudo tidak memiliki source IP untuk diblokir — lihat bagian Keterbatasan SOAR). Jalankan:
+> <img width="1401" height="428" alt="image" src="https://github.com/user-attachments/assets/5dc9d5ec-42cc-44f2-9ab6-03c435284f98" />
+
+Audit trail SOAR di agent-db menunjukkan blokir IP `203.0.113.x` (rule 100700). Jalankan:
 > ```bash
 > sudo tail -10 /var/ossec/logs/soar_audit.jsonl
 > ```
 > **VM: agent-db**
 
-> **[SCREENSHOT]** Konfirmasi iptables aktif memblokir IP di agent-db. Jalankan:
+> <img width="631" height="154" alt="image" src="https://github.com/user-attachments/assets/51f1e66f-96ff-4d4a-8daa-f756780d592f" />
+
+Konfirmasi iptables aktif memblokir IP di agent-db. Jalankan:
 > ```bash
 > sudo iptables -L INPUT -n --line-numbers
 > ```
 > **VM: agent-db**
 
-> **Keterbatasan SOAR untuk Social Engineering:** Rule 100701 (privilege escalation via sudo) bersifat alert-only — log sudo tidak memiliki field source IP sehingga tidak ada target jaringan untuk diblokir. Rule 100702 (eksfiltrasi data) juga bersifat alert-only pada iterasi ini — implementasi `ddos-block.py` saat ini hanya mendukung blokir berdasarkan source IP (`-s`), sedangkan blokir destinasi eksfiltrasi memerlukan filter `-d` yang belum diimplementasikan. Kedua keterbatasan ini adalah keputusan desain yang disengaja mengingat keterbatasan waktu, bukan bug yang belum ditemukan.
+> **Keterbatasan SOAR untuk Social Engineering:** Rule 100701 (privilege escalation via sudo) bersifat alert-only — log sudo tidak memiliki field source IP sehingga tidak ada target jaringan untuk diblokir. Rule 100702 (eksfiltrasi data) juga bersifat alert-only pada iterasi ini — implementasi `ddos-block.py` saat ini hanya mendukung blokir berdasarkan source IP (`-s`).
 
 ---
 
@@ -155,9 +175,13 @@ Sistem menggunakan dua model:
 ### Integrasi dengan Wazuh
 Model disimpan sebagai file `.pkl` dan dipanggil oleh `ai_predict.py` setiap kali ada alert masuk. Output berupa label TRUE_POSITIVE atau FALSE_POSITIVE beserta confidence score. Seluruh custom rule (100500–100702) telah diberi `<group>` tag yang sesuai (`ddos`/`malware`/`social_engineering`, `attack`) agar fitur `has_attack` dan `has_active_response` pada model AI benar-benar terisi — pada versi sebelumnya, rule custom hanya memiliki group `local,syslog` sehingga fitur tersebut selalu bernilai 0 untuk seluruh skenario serangan.
 
-> **[SCREENSHOT]** Output training pipeline `ai_false_alarm.py` di terminal.
+> <img width="257" height="202" alt="Screenshot_14" src="https://github.com/user-attachments/assets/61aab8d6-5376-4f73-a22e-cf9dc9dc8bdb" />
 
-> **[SCREENSHOT]** Uji klasifikasi AI pada alert nyata menggunakan `ai_predict.py`:
+Output training pipeline `ai_false_alarm.py` di terminal.
+
+> <img width="841" height="254" alt="Screenshot_2" src="https://github.com/user-attachments/assets/ca9c3d4d-18d0-4d48-bab8-fc28977e62e7" />
+
+Uji klasifikasi AI pada alert nyata menggunakan `ai_predict.py`:
 > ```bash
 > sudo tail -n 15 /var/ossec/logs/alerts/alerts.json | sudo python3 /var/ossec/etc/ai_predict.py
 > ```
@@ -183,9 +207,9 @@ Model disimpan sebagai file `.pkl` dan dipanggil oleh `ai_predict.py` setiap kal
 | Recall | 0.7332 |
 | F1-Score | 0.7935 |
 
-> Catatan: kontaminasi pada Isolation Forest diatur pada nilai generik (0.3) sebagai baseline, bukan disesuaikan dengan proporsi kelas asli pada dataset (~16.6% TP). Perbandingan langsung dengan Random Forest perlu memperhitungkan hal ini.
+> <img width="267" height="394" alt="Screenshot_15" src="https://github.com/user-attachments/assets/3efaefca-843e-4baf-be8b-d05576ba8b67" />
 
-> **[<img width="267" height="394" alt="Screenshot_15" src="https://github.com/user-attachments/assets/3efaefca-843e-4baf-be8b-d05576ba8b67" />]** Laporan evaluasi lengkap (`ai_model_report.txt`):
+Laporan evaluasi lengkap (`ai_model_report.txt`):
 > ```bash
 > sudo cat /var/ossec/logs/ai_model_report.txt
 > ```
